@@ -1,12 +1,13 @@
-import { useEffect, useRef, useState } from "react";
-import { useAuthStore } from "../store/authStore";
 import axios from "axios";
+import { useEffect, useRef, useState } from "react";
 import ChatBubble from "../components/ChatBubble";
+import { useAuthStore } from "../store/authStore";
 
 interface Message {
   _id: string;
-  text: string;
+  content: string;
   sender: string;
+  createdAt: string;
 }
 
 const Chat = () => {
@@ -26,11 +27,14 @@ const Chat = () => {
           },
         });
 
-        const normalizedMessages = res.data.map((msg: any) => ({
-          _id: msg._id,
-          text: msg.content,
-          sender: msg.sender,
-        }));
+        const normalizedMessages = res.data
+          .filter((msg: any) => msg.content && msg.createdAt)
+          .map((msg: any) => ({
+            _id: msg._id,
+            content: msg.content,
+            sender: msg.sender,
+            createdAt: msg.createdAt,
+          }));
 
         setMessages(normalizedMessages);
       } catch (err) {
@@ -57,8 +61,9 @@ const Chat = () => {
 
       const newMessages = res.data.map((msg: any) => ({
         _id: msg._id,
-        text: msg.content,
+        content: msg.content,
         sender: msg.sender,
+        createdAt: msg.createdAt,
       }));
 
       setMessages((prev) => [...prev, ...newMessages]);
@@ -78,8 +83,9 @@ const Chat = () => {
         {messages.map((msg) => (
           <ChatBubble
             key={msg._id}
-            text={msg.text}
-            isUser={msg.sender === user?._id}
+            content={msg.content}
+            isUser={msg.sender === user?._id || msg.sender === "user"}
+            timestamp={msg.createdAt}
           />
         ))}
         <div ref={messagesEndRef} />
