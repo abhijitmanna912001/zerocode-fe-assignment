@@ -2,6 +2,7 @@ import axios from "axios";
 import { useEffect, useRef, useState } from "react";
 import ChatBubble from "../components/ChatBubble";
 import { useAuthStore } from "../store/authStore";
+import Layout from "../components/Layout";
 
 interface Message {
   _id: string;
@@ -17,6 +18,14 @@ const Chat = () => {
   const { token, user } = useAuthStore();
 
   const API = import.meta.env.VITE_API_URL;
+
+  // 🧠 Prompt templates
+  const templates = [
+    "Hello! How can I help you?",
+    "Tell me a joke.",
+    "Translate 'Good morning' to Spanish.",
+    "What's the weather today?",
+  ];
 
   // ✅ Fetch messages on load
   useEffect(() => {
@@ -89,7 +98,6 @@ const Chat = () => {
         },
       });
 
-      // ✅ Re-fetch messages to sync frontend with backend
       const res = await axios.get(`${API}/messages`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -111,7 +119,7 @@ const Chat = () => {
       alert("Failed to delete. Try again.");
     }
   };
-  
+
   // ✅ Export chat as .txt
   const handleExport = () => {
     if (messages.length === 0) return alert("No messages to export.");
@@ -141,57 +149,72 @@ const Chat = () => {
     const timeout = setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, 100);
-
     return () => clearTimeout(timeout);
   }, [messages]);
 
   return (
-    <div className="flex flex-col h-screen p-4">
-      {/* ✅ Export Chat Button */}
-      <button
-        onClick={handleExport}
-        className="self-end mb-2 px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
-      >
-        Export Chat
-      </button>
-
-      {/* ✅ Messages Display */}
-      <div className="flex-1 overflow-y-auto mb-4">
-        {messages.map((msg) => (
-          <ChatBubble
-            key={msg._id}
-            content={msg.content}
-            isUser={msg.sender === user?._id || msg.sender === "user"}
-            timestamp={msg.createdAt}
-            onDelete={() => handleDelete(msg._id)}
-          />
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* ✅ Message Input Form */}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          sendMessage();
-        }}
-        className="flex gap-2"
-      >
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          className="flex-1 px-4 py-2 rounded border border-gray-300 focus:outline-none"
-          placeholder="Type your message..."
-        />
+    <Layout>
+      <div className="flex flex-col h-screen p-4">
+        {/* ✅ Export Chat Button */}
         <button
-          type="submit"
-          className="px-4 py-2 bg-blue-600 text-white rounded"
+          onClick={handleExport}
+          className="self-end mb-2 px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
         >
-          Send
+          Export Chat
         </button>
-      </form>
-    </div>
+
+        {/* ✅ Prompt Templates */}
+        <div className="flex flex-wrap gap-2 mb-3">
+          {templates.map((text, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => setInput(text)}
+              className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-black dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+            >
+              {text}
+            </button>
+          ))}
+        </div>
+
+        {/* ✅ Messages Display */}
+        <div className="flex-1 overflow-y-auto mb-4">
+          {messages.map((msg) => (
+            <ChatBubble
+              key={msg._id}
+              content={msg.content}
+              isUser={msg.sender === user?._id || msg.sender === "user"}
+              timestamp={msg.createdAt}
+              onDelete={() => handleDelete(msg._id)}
+            />
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* ✅ Message Input Form */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            sendMessage();
+          }}
+          className="flex gap-2"
+        >
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            className="flex-1 px-4 py-2 rounded border border-gray-300 focus:outline-none"
+            placeholder="Type your message..."
+          />
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 text-white rounded"
+          >
+            Send
+          </button>
+        </form>
+      </div>
+    </Layout>
   );
 };
 
