@@ -74,8 +74,37 @@ const Chat = () => {
   };
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const timeout = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+
+    return () => clearTimeout(timeout);
   }, [messages]);
+
+  const handleDelete = async (id: string) => {
+    const confirmDelete = confirm(
+      "Are you sure you want to delete this message?"
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      const res = await axios.delete(`${API}/messages/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const { deletedIds } = res.data;
+
+      setMessages((prev) =>
+        prev.filter((msg) => !deletedIds.includes(msg._id))
+      );
+    } catch (err) {
+      console.error("Failed to delete message:", err);
+      alert("Failed to delete. Try again.");
+    }
+  };
 
   return (
     <div className="flex flex-col h-screen p-4">
@@ -86,6 +115,7 @@ const Chat = () => {
             content={msg.content}
             isUser={msg.sender === user?._id || msg.sender === "user"}
             timestamp={msg.createdAt}
+            onDelete={() => handleDelete(msg._id)}
           />
         ))}
         <div ref={messagesEndRef} />
