@@ -1,39 +1,77 @@
+import { useState } from "react";
+import { useAuthStore } from "../store/authStore";
+import { useNavigate } from "react-router";
+import axios from "axios";
+
 const Login = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const login = useAuthStore((state) => state.login);
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await axios.post("http://localhost:5000/api/auth/login", {
+        email,
+        password,
+      });
+
+      login({ user: res.data.user, token: res.data.token });
+      navigate("/chat");
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message ?? "Login failed");
+      } else {
+        setError("An unexpected error occurred.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white text-gray-900 px-4">
-      <div className="w-full max-w-md space-y-6">
-        <h1 className="text-3xl font-bold text-center">Login</h1>
-        <form className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium">Email</label>
-            <input
-              placeholder="Email"
-              type="email"
-              className="mt-1 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Password</label>
-            <input
-              placeholder="Password"
-              type="password"
-              className="mt-1 w-full px-3 py-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
-          >
-            Login
-          </button>
-        </form>
-        <p className="text-sm text-center">
-          Don't have an account?
-          <a href="/register" className="text-blue-600 underline">
-            Register
-          </a>
-        </p>
-      </div>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md space-y-4"
+      >
+        <h2 className="text-2xl font-bold text-center">Login</h2>
+
+        {error && <p className="text-red-500 text-sm">{error}</p>}
+
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full px-4 py-2 border rounded-lg"
+          required
+        />
+
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full px-4 py-2 border rounded-lg"
+          required
+        />
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
+        >
+          {loading ? "Logging in..." : "Login"}
+        </button>
+      </form>
     </div>
   );
 };

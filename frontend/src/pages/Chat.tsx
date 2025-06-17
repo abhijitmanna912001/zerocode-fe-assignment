@@ -1,60 +1,111 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useAuthStore } from "../store/authStore";
+import axios from "axios";
+import ChatBubble from "../components/ChatBubble";
+
+interface Message {
+  _id: string;
+  text: string;
+  sender: string;
+}
 
 const Chat = () => {
-  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { token, user } = useAuthStore();
 
-  const messages = Array(20)
-    .fill(0)
-    .map((_, i) => ({
-      id: i,
-      text: `This is message ${i + 1}`,
-      sender: i % 2 === 0 ? "bot" : "user",
-    }));
+  const API = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const fetchMessages = async () => {
+      try {
+        const res = await axios.get(`${API}/messages`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const normalizedMessages = res.data.map((msg: any) => ({
+          _id: msg._id,
+          text: msg.content,
+          sender: msg.sender,
+        }));
+
+        setMessages(normalizedMessages);
+      } catch (err) {
+        console.error("Failed to fetch messages:", err);
+      }
+    };
+
+    if (token) fetchMessages();
+  }, [API, token]);
+
+  const sendMessage = async () => {
+    if (!input.trim()) return;
+
+    try {
+      const res = await axios.post(
+        `${API}/messages`,
+        { content: input },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const newMessages = res.data.map((msg: any) => ({
+        _id: msg._id,
+        text: msg.content,
+        sender: msg.sender,
+      }));
+
+      setMessages((prev) => [...prev, ...newMessages]);
+      setInput("");
+    } catch (err) {
+      console.error("Failed to send message:", err);
+    }
+  };
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   return (
-    <div className="flex flex-col h-screen bg-white dark:bg-gray-900 text-black dark:text-white">
-      {/* Chat Header */}
-      <div className="p-4 border-b border-gray-300 dark:border-gray-700">
-        <h2 className="text-xl font-semibold">Chat with Bot</h2>
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+    <div className="flex flex-col h-screen p-4">
+      <div className="flex-1 overflow-y-auto mb-4">
         {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`max-w-xs p-3 rounded-lg ${
-              msg.sender === "user"
-                ? "bg-blue-600 text-white self-end ml-auto"
-                : "bg-gray-200 dark:bg-gray-700 text-black dark:text-white self-start mr-auto"
-            }`}
-          >
-            {msg.text}
-          </div>
+          <ChatBubble
+            key={msg._id}
+            text={msg.text}
+            isUser={msg.sender === user?._id}
+          />
         ))}
-        <div ref={bottomRef} />
+        <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
-      <div className="p-4 border-t border-gray-300 dark:border-gray-700">
-        <form className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Type a message..."
-            className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-          >
-            Send
-          </button>
-        </form>
-      </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          sendMessage();
+        }}
+        className="flex gap-2"
+      >
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          className="flex-1 px-4 py-2 rounded border border-gray-300 focus:outline-none"
+          placeholder="Type your message..."
+        />
+        <button
+          type="submit"
+          className="px-4 py-2 bg-blue-600 text-white rounded"
+        >
+          Send
+        </button>
+      </form>
     </div>
   );
 };
